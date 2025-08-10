@@ -9,6 +9,7 @@ import html2canvas from "html2canvas";
 
 export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
+  const [filename, setFilename] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pdfGenerated, setPdfGenerated] = useState(false);
 
@@ -100,7 +101,7 @@ export const PDFGenerator = () => {
         pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
         
         // Save the PDF
-        const fileName = `webpage-${Date.now()}.pdf`;
+        const fileName = filename.trim() ? `${filename.trim()}.pdf` : `webpage-${Date.now()}.pdf`;
         pdf.save(fileName);
         
         setPdfGenerated(true);
@@ -144,7 +145,7 @@ export const PDFGenerator = () => {
         pdf.text(url, 20, 190);
         
         // Save the PDF
-        const fileName = `website-info-${Date.now()}.pdf`;
+        const fileName = filename.trim() ? `${filename.trim()}.pdf` : `website-info-${Date.now()}.pdf`;
         pdf.save(fileName);
         
         setPdfGenerated(true);
@@ -162,6 +163,7 @@ export const PDFGenerator = () => {
   const generateAnother = () => {
     setPdfGenerated(false);
     setUrl("");
+    setFilename("");
   };
 
   return (
@@ -204,6 +206,28 @@ export const PDFGenerator = () => {
                   }
                 }}
               />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="filename" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <FileText className="h-4 w-4 text-primary animate-pulse-soft" />
+                PDF File Name (Optional)
+              </label>
+              <Input
+                id="filename"
+                type="text"
+                placeholder="my-website-pdf"
+                value={filename}
+                onChange={(e) => setFilename(e.target.value)}
+                className="border-primary/20 focus:border-primary focus:ring-primary/20"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !isLoading) {
+                    generatePDF();
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Leave empty for automatic naming
+              </p>
             </div>
             <Button
               onClick={generatePDF}
