@@ -1,7 +1,7 @@
-import ClientPDFGenerator from "@/components/ClientPDFGenerator";
+import { PDFGenerator } from "@/components/PDFGenerator";
 
 const Index = () => {
-  return <ClientPDFGenerator />;
+  return <PDFGenerator />;
 };
 
 export default Index;

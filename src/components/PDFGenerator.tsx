@@ -4,21 +4,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, Heart, Download, FileText, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 
 interface PDFResponse {
   success: boolean;
   pdf: string;
-  filename: string;
+  mbIn: number;
   mbOut: number;
   cost: number;
+  responseId: string;
 }
 
 export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
-  const [filename, setFilename] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pdfResult, setPdfResult] = useState<PDFResponse | null>(null);
+  const [apiKey, setApiKey] = useState("");
 
   const isValidUrl = (string: string) => {
     try {
@@ -30,6 +30,11 @@ export const PDFGenerator = () => {
   };
 
   const generatePDF = async () => {
+    if (!apiKey.trim()) {
+      toast.error("Please enter your Api2Pdf API key first! 🔑");
+      return;
+    }
+
     if (!url.trim()) {
       toast.error("Please enter a URL to convert! 🌐");
       return;
@@ -44,16 +49,31 @@ export const PDFGenerator = () => {
     setPdfResult(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('generate-pdf', {
-        body: {
+      const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
+        method: "POST",
+        headers: {
+          "Authorization": apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           url: url,
-          filename: filename.trim() || undefined
-        }
+          inlinePdf: true,
+          options: {
+            landscape: false,
+            displayHeaderFooter: false,
+            printBackground: true,
+            format: "A4",
+            margin: {
+              top: "0.5in",
+              bottom: "0.5in",
+              left: "0.5in",
+              right: "0.5in"
+            }
+          }
+        }),
       });
 
-      if (error) {
-        throw error;
-      }
+      const data = await response.json();
 
       if (data.success) {
         setPdfResult(data);
@@ -73,7 +93,7 @@ export const PDFGenerator = () => {
     if (pdfResult?.pdf) {
       const link = document.createElement("a");
       link.href = pdfResult.pdf;
-      link.download = pdfResult.filename;
+      link.download = `webpage-${Date.now()}.pdf`;
       link.target = "_blank";
       document.body.appendChild(link);
       link.click();
@@ -100,24 +120,32 @@ export const PDFGenerator = () => {
           </p>
         </div>
 
-        {/* Filename Input */}
+        {/* API Key Input */}
         <Card className="bg-gradient-card border-0 shadow-soft">
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
-              <label htmlFor="filename" className="text-sm font-medium text-foreground flex items-center gap-2">
+              <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                PDF Filename (Optional)
+                Your Api2Pdf API Key
               </label>
               <Input
-                id="filename"
-                type="text"
-                placeholder="my-document.pdf"
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
+                id="apiKey"
+                type="password"
+                placeholder="Enter your Api2Pdf API key..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
                 className="border-primary/20 focus:border-primary focus:ring-primary/20"
               />
               <p className="text-xs text-muted-foreground">
-                Leave empty for auto-generated filename
+                Get your API key from{" "}
+                <a
+                  href="https://portal.api2pdf.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  api2pdf.com
+                </a>
               </p>
             </div>
           </CardContent>
