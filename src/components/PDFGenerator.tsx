@@ -4,21 +4,13 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, Heart, Download, FileText, Loader2 } from "lucide-react";
-
-interface PDFResponse {
-  success: boolean;
-  pdf: string;
-  mbIn: number;
-  mbOut: number;
-  cost: number;
-  responseId: string;
-}
+import jsPDF from "jspdf";
+import html2canvas from "html2canvas";
 
 export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pdfResult, setPdfResult] = useState<PDFResponse | null>(null);
-  const [apiKey, setApiKey] = useState("");
+  const [pdfGenerated, setPdfGenerated] = useState(false);
 
   const isValidUrl = (string: string) => {
     try {
@@ -30,11 +22,6 @@ export const PDFGenerator = () => {
   };
 
   const generatePDF = async () => {
-    if (!apiKey.trim()) {
-      toast.error("Please enter your Api2Pdf API key first! 🔑");
-      return;
-    }
-
     if (!url.trim()) {
       toast.error("Please enter a URL to convert! 🌐");
       return;
@@ -46,60 +33,78 @@ export const PDFGenerator = () => {
     }
 
     setIsLoading(true);
-    setPdfResult(null);
+    setPdfGenerated(false);
 
     try {
-      const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
-        method: "POST",
-        headers: {
-          "Authorization": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: url,
-          inlinePdf: true,
-          options: {
-            landscape: false,
-            displayHeaderFooter: false,
-            printBackground: true,
-            format: "A4",
-            margin: {
-              top: "0.5in",
-              bottom: "0.5in",
-              left: "0.5in",
-              right: "0.5in"
-            }
-          }
-        }),
+      // Create a hidden iframe to load the website
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      iframe.style.width = '1200px';
+      iframe.style.height = '800px';
+      document.body.appendChild(iframe);
+
+      // Load the URL in the iframe
+      iframe.src = url;
+
+      // Wait for the iframe to load
+      await new Promise((resolve, reject) => {
+        iframe.onload = resolve;
+        iframe.onerror = () => reject(new Error('Failed to load website'));
+        
+        // Timeout after 10 seconds
+        setTimeout(() => reject(new Error('Website took too long to load')), 10000);
       });
 
-      const data = await response.json();
+      // Wait a bit more for dynamic content to load
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-      if (data.success) {
-        setPdfResult(data);
-        toast.success("Your lovely PDF is ready! 💖");
-      } else {
-        toast.error(`Error: ${data.error || "Failed to generate PDF"}`);
-      }
+      // Capture the iframe content
+      const canvas = await html2canvas(iframe.contentDocument?.body || iframe.contentWindow?.document.body, {
+        useCORS: true,
+        allowTaint: true,
+        scale: 0.8,
+        width: 1200,
+        height: 800
+      });
+
+      // Create PDF
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const scaledWidth = imgWidth * ratio;
+      const scaledHeight = imgHeight * ratio;
+      
+      const x = (pdfWidth - scaledWidth) / 2;
+      const y = (pdfHeight - scaledHeight) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
+      
+      // Save the PDF
+      const fileName = `webpage-${Date.now()}.pdf`;
+      pdf.save(fileName);
+
+      // Clean up
+      document.body.removeChild(iframe);
+      
+      setPdfGenerated(true);
+      toast.success("Your lovely PDF is ready and downloaded! 💖");
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error("Oops! Something went wrong. Please try again! 🥺");
+      toast.error("Oops! Couldn't capture the website. Please try a different URL! 🥺");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const downloadPDF = () => {
-    if (pdfResult?.pdf) {
-      const link = document.createElement("a");
-      link.href = pdfResult.pdf;
-      link.download = `webpage-${Date.now()}.pdf`;
-      link.target = "_blank";
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      toast.success("Download started! Enjoy your PDF! 🎉");
-    }
+  const generateAnother = () => {
+    setPdfGenerated(false);
+    setUrl("");
   };
 
   return (
@@ -116,40 +121,10 @@ export const PDFGenerator = () => {
             PDF Magic ✨
           </h1>
           <p className="text-xl text-muted-foreground">
-            Let's turn this into a beautiful PDF for you ✨
+            Turn any website into a beautiful PDF - No API key needed! ✨
           </p>
         </div>
 
-        {/* API Key Input */}
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Your Api2Pdf API Key
-              </label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Enter your Api2Pdf API key..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="border-primary/20 focus:border-primary focus:ring-primary/20"
-              />
-              <p className="text-xs text-muted-foreground">
-                Get your API key from{" "}
-                <a
-                  href="https://portal.api2pdf.com/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  api2pdf.com
-                </a>
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* URL Input */}
         <Card className="bg-gradient-card border-0 shadow-soft">
@@ -195,7 +170,7 @@ export const PDFGenerator = () => {
         </Card>
 
         {/* Success Result */}
-        {pdfResult && (
+        {pdfGenerated && (
           <Card className="bg-gradient-card border-0 shadow-soft animate-[fadeIn_0.5s_ease-out]">
             <CardContent className="p-6 text-center space-y-4">
               <div className="flex justify-center">
@@ -204,23 +179,19 @@ export const PDFGenerator = () => {
                 </div>
               </div>
               <h3 className="text-xl font-semibold text-foreground">
-                Here's your lovely PDF 💖
+                PDF Downloaded Successfully! 💖
               </h3>
               <p className="text-muted-foreground">
-                Click below to download and keep it forever!
+                Your PDF has been automatically downloaded. Check your downloads folder!
               </p>
               <Button
-                onClick={downloadPDF}
+                onClick={generateAnother}
                 className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gentle hover:scale-105 transition-all duration-200"
                 size="lg"
               >
-                <Download className="mr-2 h-5 w-5" />
-                Download PDF
+                <Sparkles className="mr-2 h-5 w-5" />
+                Generate Another PDF
               </Button>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>Size: {pdfResult.mbOut.toFixed(2)} MB</p>
-                <p>Cost: ${pdfResult.cost.toFixed(4)}</p>
-              </div>
             </CardContent>
           </Card>
         )}
