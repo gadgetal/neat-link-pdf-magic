@@ -36,38 +36,81 @@ export const PDFGenerator = () => {
     setPdfGenerated(false);
 
     try {
-      // Create a hidden iframe to load the website
-      const iframe = document.createElement('iframe');
-      iframe.style.display = 'none';
-      iframe.style.width = '1200px';
-      iframe.style.height = '800px';
-      document.body.appendChild(iframe);
+      // Create a new window to load the website
+      const newWindow = window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes');
+      
+      if (!newWindow) {
+        throw new Error('Popup blocked. Please allow popups for this site.');
+      }
 
-      // Load the URL in the iframe
-      iframe.src = url;
-
-      // Wait for the iframe to load
+      // Wait for the new window to load
       await new Promise((resolve, reject) => {
-        iframe.onload = resolve;
-        iframe.onerror = () => reject(new Error('Failed to load website'));
+        const checkLoaded = () => {
+          try {
+            if (newWindow.document.readyState === 'complete') {
+              resolve(true);
+            } else {
+              setTimeout(checkLoaded, 500);
+            }
+          } catch (e) {
+            // Cross-origin error - window is loaded but we can't access it
+            // Wait a bit more and assume it's loaded
+            setTimeout(() => resolve(true), 3000);
+          }
+        };
         
-        // Timeout after 10 seconds
-        setTimeout(() => reject(new Error('Website took too long to load')), 10000);
+        // Start checking after a short delay
+        setTimeout(checkLoaded, 1000);
+        
+        // Timeout after 15 seconds
+        setTimeout(() => reject(new Error('Website took too long to load')), 15000);
       });
 
-      // Wait a bit more for dynamic content to load
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait for dynamic content to load
+      await new Promise(resolve => setTimeout(resolve, 3000));
 
-      // Capture the iframe content
-      const canvas = await html2canvas(iframe.contentDocument?.body || iframe.contentWindow?.document.body, {
-        useCORS: true,
-        allowTaint: true,
-        scale: 0.8,
-        width: 1200,
-        height: 800
-      });
+      let canvas;
+      try {
+        // Try to capture the new window content
+        canvas = await html2canvas(newWindow.document.body, {
+          useCORS: true,
+          allowTaint: true,
+          scale: 0.6,
+          width: 1200,
+          height: 800,
+          scrollX: 0,
+          scrollY: 0
+        });
+      } catch (crossOriginError) {
+        // If cross-origin, create a PDF with URL info instead
+        newWindow.close();
+        
+        // Create a simple PDF with URL information
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // Add title
+        pdf.setFontSize(20);
+        pdf.text('Website PDF', 20, 30);
+        
+        // Add URL
+        pdf.setFontSize(12);
+        pdf.text(`URL: ${url}`, 20, 50);
+        pdf.text('Note: Direct capture not possible due to security restrictions.', 20, 70);
+        pdf.text('Please try a different website or use a screenshot tool.', 20, 85);
+        
+        // Save the PDF
+        const fileName = `webpage-info-${Date.now()}.pdf`;
+        pdf.save(fileName);
+        
+        setPdfGenerated(true);
+        toast.success("PDF with URL info downloaded! For full capture, try public websites. 💖");
+        return;
+      }
 
-      // Create PDF
+      // Close the popup window
+      newWindow.close();
+
+      // Create PDF from canvas
       const pdf = new jsPDF('p', 'mm', 'a4');
       const imgData = canvas.toDataURL('image/png');
       
@@ -88,15 +131,23 @@ export const PDFGenerator = () => {
       // Save the PDF
       const fileName = `webpage-${Date.now()}.pdf`;
       pdf.save(fileName);
-
-      // Clean up
-      document.body.removeChild(iframe);
       
       setPdfGenerated(true);
       toast.success("Your lovely PDF is ready and downloaded! 💖");
+      
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error("Oops! Couldn't capture the website. Please try a different URL! 🥺");
+      let errorMessage = "Oops! Couldn't capture the website. ";
+      
+      if (error.message.includes('Popup blocked')) {
+        errorMessage += "Please allow popups and try again! 🚪";
+      } else if (error.message.includes('took too long')) {
+        errorMessage += "Website is taking too long to load. Try a faster website! ⏰";
+      } else {
+        errorMessage += "Please try a different URL! 🥺";
+      }
+      
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
