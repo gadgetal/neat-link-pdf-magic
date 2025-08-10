@@ -36,118 +36,124 @@ export const PDFGenerator = () => {
     setPdfGenerated(false);
 
     try {
-      // Create a new window to load the website
-      const newWindow = window.open(url, '_blank', 'width=1200,height=800,scrollbars=yes');
-      
-      if (!newWindow) {
-        throw new Error('Popup blocked. Please allow popups for this site.');
+      // Method 1: Try to fetch and render HTML content
+      let htmlContent = '';
+      let canCapture = false;
+
+      try {
+        const response = await fetch(url, {
+          mode: 'cors',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+        
+        if (response.ok) {
+          htmlContent = await response.text();
+          canCapture = true;
+        }
+      } catch (fetchError) {
+        console.log("CORS fetch failed, trying alternative method");
       }
 
-      // Wait for the new window to load
-      await new Promise((resolve, reject) => {
-        const checkLoaded = () => {
-          try {
-            if (newWindow.document.readyState === 'complete') {
-              resolve(true);
-            } else {
-              setTimeout(checkLoaded, 500);
-            }
-          } catch (e) {
-            // Cross-origin error - window is loaded but we can't access it
-            // Wait a bit more and assume it's loaded
-            setTimeout(() => resolve(true), 3000);
-          }
-        };
-        
-        // Start checking after a short delay
-        setTimeout(checkLoaded, 1000);
-        
-        // Timeout after 15 seconds
-        setTimeout(() => reject(new Error('Website took too long to load')), 15000);
-      });
+      if (canCapture && htmlContent) {
+        // Create a temporary div to render the HTML
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = htmlContent;
+        tempDiv.style.width = '1200px';
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.top = '0';
+        document.body.appendChild(tempDiv);
 
-      // Wait for dynamic content to load
-      await new Promise(resolve => setTimeout(resolve, 3000));
+        // Wait for images to load
+        await new Promise(resolve => setTimeout(resolve, 2000));
 
-      let canvas;
-      try {
-        // Try to capture the new window content
-        canvas = await html2canvas(newWindow.document.body, {
+        // Capture the rendered content
+        const canvas = await html2canvas(tempDiv, {
           useCORS: true,
           allowTaint: true,
-          scale: 0.6,
+          scale: 0.7,
           width: 1200,
-          height: 800,
-          scrollX: 0,
-          scrollY: 0
+          backgroundColor: '#ffffff'
         });
-      } catch (crossOriginError) {
-        // If cross-origin, create a PDF with URL info instead
-        newWindow.close();
-        
-        // Create a simple PDF with URL information
+
+        // Clean up
+        document.body.removeChild(tempDiv);
+
+        // Create PDF from canvas
         const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/png');
         
-        // Add title
-        pdf.setFontSize(20);
-        pdf.text('Website PDF', 20, 30);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
         
-        // Add URL
-        pdf.setFontSize(12);
-        pdf.text(`URL: ${url}`, 20, 50);
-        pdf.text('Note: Direct capture not possible due to security restrictions.', 20, 70);
-        pdf.text('Please try a different website or use a screenshot tool.', 20, 85);
+        const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+        const scaledWidth = imgWidth * ratio;
+        const scaledHeight = imgHeight * ratio;
+        
+        const x = (pdfWidth - scaledWidth) / 2;
+        const y = (pdfHeight - scaledHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
         
         // Save the PDF
-        const fileName = `webpage-info-${Date.now()}.pdf`;
+        const fileName = `webpage-${Date.now()}.pdf`;
         pdf.save(fileName);
         
         setPdfGenerated(true);
-        toast.success("PDF with URL info downloaded! For full capture, try public websites. 💖");
-        return;
+        toast.success("Your website PDF is ready and downloaded! 💖");
+        
+      } else {
+        // Method 2: Create PDF with website information and instructions
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        
+        // Add header
+        pdf.setFontSize(24);
+        pdf.setTextColor(75, 0, 130);
+        pdf.text('Website PDF Report', 20, 30);
+        
+        // Add URL
+        pdf.setFontSize(14);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Website URL:', 20, 50);
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 255);
+        pdf.text(url, 20, 60);
+        
+        // Add note
+        pdf.setFontSize(10);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text('Generated on: ' + new Date().toLocaleString(), 20, 80);
+        
+        // Add instructions
+        pdf.setFontSize(12);
+        pdf.setTextColor(0, 0, 0);
+        pdf.text('Note: Direct website capture may be restricted by browser security.', 20, 100);
+        pdf.text('For full website capture, try:', 20, 115);
+        pdf.text('• Public websites without authentication', 25, 130);
+        pdf.text('• Websites that allow cross-origin requests', 25, 145);
+        pdf.text('• Or use browser extensions for screenshots', 25, 160);
+        
+        // Add QR code text (simulated)
+        pdf.setFontSize(10);
+        pdf.text('You can visit this URL directly:', 20, 180);
+        pdf.setTextColor(0, 0, 255);
+        pdf.text(url, 20, 190);
+        
+        // Save the PDF
+        const fileName = `website-info-${Date.now()}.pdf`;
+        pdf.save(fileName);
+        
+        setPdfGenerated(true);
+        toast.success("PDF with website info downloaded! 📄");
       }
-
-      // Close the popup window
-      newWindow.close();
-
-      // Create PDF from canvas
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const scaledWidth = imgWidth * ratio;
-      const scaledHeight = imgHeight * ratio;
-      
-      const x = (pdfWidth - scaledWidth) / 2;
-      const y = (pdfHeight - scaledHeight) / 2;
-
-      pdf.addImage(imgData, 'PNG', x, y, scaledWidth, scaledHeight);
-      
-      // Save the PDF
-      const fileName = `webpage-${Date.now()}.pdf`;
-      pdf.save(fileName);
-      
-      setPdfGenerated(true);
-      toast.success("Your lovely PDF is ready and downloaded! 💖");
       
     } catch (error) {
       console.error("Error generating PDF:", error);
-      let errorMessage = "Oops! Couldn't capture the website. ";
-      
-      if (error.message.includes('Popup blocked')) {
-        errorMessage += "Please allow popups and try again! 🚪";
-      } else if (error.message.includes('took too long')) {
-        errorMessage += "Website is taking too long to load. Try a faster website! ⏰";
-      } else {
-        errorMessage += "Please try a different URL! 🥺";
-      }
-      
-      toast.error(errorMessage);
+      toast.error("Couldn't generate PDF. Please try a different website! 🥺");
     } finally {
       setIsLoading(false);
     }
