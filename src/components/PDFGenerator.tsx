@@ -37,157 +37,99 @@ export const PDFGenerator = () => {
     setPdfGenerated(false);
 
     try {
-      toast("Loading website to capture...", { duration: 3000 });
-      
-      // Use screenshot service to capture the website
-      const screenshotUrl = `https://api.screenshotone.com/take?access_key=demo&url=${encodeURIComponent(url)}&viewport_width=1200&viewport_height=800&device_scale_factor=2&format=png&full_page=true&delay=3`;
+      toast("Capturing website screenshot...", { duration: 5000 });
       
       // Create PDF
       const pdf = new jsPDF('p', 'mm', 'a4');
       
-      try {
-        // Try to load the screenshot
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        
-        await new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-          img.src = screenshotUrl;
-          setTimeout(reject, 15000); // 15 second timeout
-        });
-        
-        // Create canvas to process the image
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        canvas.width = img.width;
-        canvas.height = img.height;
-        
-        if (ctx) {
-          ctx.drawImage(img, 0, 0);
+      // Use a reliable screenshot service with multiple fallbacks
+      const screenshotServices = [
+        `https://image.thum.io/get/width/1200/crop/900/png/${encodeURIComponent(url)}`,
+        `https://api.urlbox.io/v1/ca482d7e-9417-4569-90fe-80f7c5e1c781/png?url=${encodeURIComponent(url)}&width=1200&height=900&retina=true`,
+        `https://htmlcsstoimage.com/demo_run.php?url=${encodeURIComponent(url)}&width=1200&height=900`
+      ];
+      
+      let imageLoaded = false;
+      
+      for (const screenshotUrl of screenshotServices) {
+        try {
+          console.log(`Trying screenshot service: ${screenshotUrl}`);
           
-          // Add title page
-          pdf.setFontSize(18);
-          pdf.setTextColor(138, 43, 226);
-          pdf.text('Website Screenshot ✨', 20, 20);
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
           
-          // Add URL
-          pdf.setFontSize(10);
-          pdf.setTextColor(0, 0, 0);
-          const urlLines = pdf.splitTextToSize(url, 170);
-          pdf.text(urlLines, 20, 30);
+          await new Promise((resolve, reject) => {
+            img.onload = () => {
+              console.log('Image loaded successfully:', img.width, 'x', img.height);
+              resolve(undefined);
+            };
+            img.onerror = (e) => {
+              console.log('Image load failed:', e);
+              reject(new Error('Image load failed'));
+            };
+            img.src = screenshotUrl;
+            setTimeout(() => reject(new Error('Timeout')), 10000);
+          });
           
-          // Calculate dimensions
-          const pageWidth = 170; // A4 width minus margins
-          const maxPageHeight = 250; // Available height
-          
-          const imgData = canvas.toDataURL('image/jpeg', 0.9);
-          const imgWidth = pageWidth;
-          const imgHeight = (img.height * imgWidth) / img.width;
-          
-          if (imgHeight <= maxPageHeight) {
-            // Single page
-            pdf.addImage(imgData, 'JPEG', 20, 40, imgWidth, imgHeight);
-          } else {
-            // Multiple pages
-            const pages = Math.ceil(imgHeight / maxPageHeight);
+          // Verify image has actual content
+          if (img.width > 100 && img.height > 100) {
+            // Add title
+            pdf.setFontSize(16);
+            pdf.setTextColor(138, 43, 226);
+            pdf.text('Website Screenshot', 20, 20);
             
-            for (let i = 0; i < pages; i++) {
-              if (i > 0) pdf.addPage();
+            // Add URL
+            pdf.setFontSize(10);
+            pdf.setTextColor(0, 0, 0);
+            const urlLines = pdf.splitTextToSize(url, 170);
+            pdf.text(urlLines, 20, 30);
+            
+            // Calculate image dimensions to fit page
+            const pageWidth = 170;
+            const maxHeight = 240;
+            const imgAspectRatio = img.width / img.height;
+            let imgWidth = pageWidth;
+            let imgHeight = pageWidth / imgAspectRatio;
+            
+            if (imgHeight > maxHeight) {
+              imgHeight = maxHeight;
+              imgWidth = maxHeight * imgAspectRatio;
+            }
+            
+            // Create canvas to get image data
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              const imgData = canvas.toDataURL('image/jpeg', 0.9);
               
-              const yOffset = i * maxPageHeight;
-              const currentHeight = Math.min(maxPageHeight, imgHeight - yOffset);
-              
-              // Create section canvas
-              const sectionCanvas = document.createElement('canvas');
-              const sectionCtx = sectionCanvas.getContext('2d');
-              
-              if (sectionCtx) {
-                const sourceY = (yOffset * img.height) / imgHeight;
-                const sourceHeight = (currentHeight * img.height) / imgHeight;
-                
-                sectionCanvas.width = img.width;
-                sectionCanvas.height = sourceHeight;
-                
-                sectionCtx.drawImage(img, 0, sourceY, img.width, sourceHeight, 0, 0, img.width, sourceHeight);
-                
-                const sectionData = sectionCanvas.toDataURL('image/jpeg', 0.9);
-                pdf.addImage(sectionData, 'JPEG', 20, i === 0 ? 40 : 20, imgWidth, currentHeight);
-              }
+              // Add image to PDF
+              pdf.addImage(imgData, 'JPEG', 20, 45, imgWidth, imgHeight);
+              imageLoaded = true;
+              break;
             }
           }
-        }
-        
-      } catch (screenshotError) {
-        console.log("Screenshot service failed, trying iframe method...");
-        
-        // Fallback to iframe method
-        const iframe = document.createElement('iframe');
-        iframe.style.cssText = `
-          position: fixed;
-          top: -9999px;
-          left: -9999px;
-          width: 1200px;
-          height: 800px;
-          border: none;
-          background: white;
-        `;
-        
-        document.body.appendChild(iframe);
-        
-        // Configure iframe
-        iframe.src = url;
-        
-        // Wait for load
-        await new Promise((resolve, reject) => {
-          iframe.onload = () => {
-            setTimeout(resolve, 3000); // Wait for content
-          };
-          iframe.onerror = reject;
-          setTimeout(reject, 12000);
-        });
-        
-        // Capture iframe
-        let canvas;
-        try {
-          canvas = await html2canvas(iframe.contentDocument?.body || document.createElement('div'), {
-            allowTaint: true,
-            useCORS: true,
-            scale: 1,
-            width: 1200,
-            height: 800,
-            backgroundColor: '#ffffff'
-          });
-        } catch (canvasError) {
-          // If iframe content is blocked, capture the iframe element itself
-          canvas = await html2canvas(iframe, {
-            allowTaint: true,
-            useCORS: true,
-            scale: 1
-          });
-        }
-        
-        document.body.removeChild(iframe);
-        
-        if (canvas) {
-          const imgData = canvas.toDataURL('image/jpeg', 0.8);
-          const imgWidth = 170;
-          const imgHeight = (canvas.height * imgWidth) / canvas.width;
           
-          pdf.addImage(imgData, 'JPEG', 20, 40, imgWidth, Math.min(imgHeight, 250));
+        } catch (serviceError) {
+          console.log(`Screenshot service failed:`, serviceError);
+          continue;
         }
       }
       
+      if (!imageLoaded) {
+        throw new Error('All screenshot services failed');
+      }
+      
       // Add footer
-      const pageCount = pdf.getNumberOfPages();
-      pdf.setPage(pageCount);
       pdf.setFontSize(8);
       pdf.setTextColor(150, 150, 150);
-      pdf.text(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, 20, 285);
+      pdf.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 285);
       
       // Save PDF
-      const fileName = filename.trim() ? `${filename.trim()}.pdf` : `website-screenshot-${Date.now()}.pdf`;
+      const fileName = filename.trim() ? `${filename.trim()}.pdf` : `website-${Date.now()}.pdf`;
       pdf.save(fileName);
       
       setPdfGenerated(true);
@@ -195,45 +137,7 @@ export const PDFGenerator = () => {
       
     } catch (error) {
       console.error("Error generating PDF:", error);
-      
-      // Final fallback - create info PDF
-      try {
-        const pdf = new jsPDF('p', 'mm', 'a4');
-        
-        pdf.setFontSize(22);
-        pdf.setTextColor(138, 43, 226);
-        pdf.text('Website Information ✨', 20, 30);
-        
-        pdf.setFontSize(14);
-        pdf.setTextColor(0, 0, 0);
-        pdf.text('Website URL:', 20, 55);
-        
-        pdf.setFontSize(12);
-        pdf.setTextColor(25, 118, 210);
-        const urlLines = pdf.splitTextToSize(url, 170);
-        pdf.text(urlLines, 20, 70);
-        
-        pdf.setFontSize(11);
-        pdf.setTextColor(0, 0, 0);
-        pdf.text('To view this website:', 20, 100);
-        pdf.text('1. Copy the URL above', 25, 115);
-        pdf.text('2. Open your web browser', 25, 130);
-        pdf.text('3. Paste the URL and visit', 25, 145);
-        
-        pdf.setFontSize(10);
-        pdf.setTextColor(100, 100, 100);
-        pdf.text('Note: Visual capture was not available due to browser restrictions.', 20, 170);
-        
-        const fileName = filename.trim() ? `${filename.trim()}.pdf` : `website-info-${Date.now()}.pdf`;
-        pdf.save(fileName);
-        
-        setPdfGenerated(true);
-        toast.success("Website information PDF created! 📄");
-        
-      } catch (finalError) {
-        console.error("Final fallback failed:", finalError);
-        toast.error("Unable to create PDF. Please try again! 🔄");
-      }
+      toast.error("Unable to capture website screenshot. Please check the URL and try again! 🔄");
     } finally {
       setIsLoading(false);
     }
