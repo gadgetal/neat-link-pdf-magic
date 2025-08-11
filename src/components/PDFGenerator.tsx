@@ -29,6 +29,11 @@ export const PDFGenerator = () => {
   };
 
   const generatePDF = async () => {
+    if (!apiKey.trim()) {
+      toast.error("Please enter your PDFShift API key first! 🔑");
+      return;
+    }
+
     if (!url.trim()) {
       toast.error("Please enter a URL to convert! 🌐");
       return;
@@ -43,8 +48,21 @@ export const PDFGenerator = () => {
     setPdfResult(null);
 
     try {
-      // Using Microlink.io for free PDF generation
-      const response = await fetch(`https://api.microlink.io/pdf?url=${encodeURIComponent(url)}&format=A4&margin=0.5in`);
+      const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+        method: "POST",
+        headers: {
+          "Authorization": `Basic ${btoa(apiKey + ":")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          source: url,
+          landscape: false,
+          format: "A4",
+          margin: "0.5in",
+          print_background: true,
+          wait_until: "networkidle0"
+        }),
+      });
 
       if (response.ok) {
         const pdfBlob = await response.blob();
@@ -59,7 +77,8 @@ export const PDFGenerator = () => {
         setPdfResult(result);
         toast.success("Your lovely PDF is ready! 💖");
       } else {
-        toast.error("Failed to generate PDF. Please try again!");
+        const errorData = await response.json();
+        toast.error(`Error: ${errorData.error || "Failed to generate PDF"}`);
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
