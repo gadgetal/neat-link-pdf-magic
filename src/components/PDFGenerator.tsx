@@ -119,37 +119,6 @@ export const PDFGenerator = () => {
           </p>
         </div>
 
-        {/* API Key Input */}
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Your PDFShift API Key
-              </label>
-              <Input
-                id="apiKey"
-                type="text"
-                placeholder="Enter your PDFShift API key..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="border-primary/20 focus:border-primary focus:ring-primary/20"
-              />
-              <p className="text-xs text-muted-foreground">
-                Get your API key from{" "}
-                <a
-                  href="https://pdfshift.io/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  pdfshift.io
-                </a>
-                {" "}(250 free requests/month)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* URL Input */}
         <Card className="bg-gradient-card border-0 shadow-soft">
