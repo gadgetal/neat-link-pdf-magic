@@ -17,7 +17,7 @@ export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pdfResult, setPdfResult] = useState<PDFShiftResponse | null>(null);
-  const [apiKey, setApiKey] = useState("");
+  const [apiKey, setApiKey] = useState("sk_46f5ed081e2c772667c363b653d428f050b8f53d");
 
   const isValidUrl = (string: string) => {
     try {
