@@ -5,19 +5,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, Heart, Download, FileText, Loader2 } from "lucide-react";
 
-interface PDFResponse {
+interface PDFShiftResponse {
   success: boolean;
-  pdf: string;
-  mbIn: number;
-  mbOut: number;
-  cost: number;
-  responseId: string;
+  url: string;
+  filesize: number;
+  duration: number;
+  response: string;
 }
 
 export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pdfResult, setPdfResult] = useState<PDFResponse | null>(null);
+  const [pdfResult, setPdfResult] = useState<PDFShiftResponse | null>(null);
   const [apiKey, setApiKey] = useState("");
 
   const isValidUrl = (string: string) => {
@@ -31,7 +30,7 @@ export const PDFGenerator = () => {
 
   const generatePDF = async () => {
     if (!apiKey.trim()) {
-      toast.error("Please enter your Api2Pdf API key first! 🔑");
+      toast.error("Please enter your PDFShift API key first! 🔑");
       return;
     }
 
@@ -49,37 +48,37 @@ export const PDFGenerator = () => {
     setPdfResult(null);
 
     try {
-      const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
+      const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
         method: "POST",
         headers: {
-          "Authorization": apiKey,
+          "Authorization": `Basic ${btoa(apiKey + ":")}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          url: url,
-          inlinePdf: true,
-          options: {
-            landscape: false,
-            displayHeaderFooter: false,
-            printBackground: true,
-            format: "A4",
-            margin: {
-              top: "0.5in",
-              bottom: "0.5in",
-              left: "0.5in",
-              right: "0.5in"
-            }
-          }
+          source: url,
+          landscape: false,
+          format: "A4",
+          margin: "0.5in",
+          print_background: true,
+          wait_until: "networkidle0"
         }),
       });
 
-      const data = await response.json();
-
-      if (data.success) {
-        setPdfResult(data);
+      if (response.ok) {
+        const pdfBlob = await response.blob();
+        const pdfUrl = URL.createObjectURL(pdfBlob);
+        const result: PDFShiftResponse = {
+          success: true,
+          url: pdfUrl,
+          filesize: pdfBlob.size,
+          duration: 0,
+          response: "success"
+        };
+        setPdfResult(result);
         toast.success("Your lovely PDF is ready! 💖");
       } else {
-        toast.error(`Error: ${data.error || "Failed to generate PDF"}`);
+        const errorData = await response.json();
+        toast.error(`Error: ${errorData.error || "Failed to generate PDF"}`);
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -90,9 +89,9 @@ export const PDFGenerator = () => {
   };
 
   const downloadPDF = () => {
-    if (pdfResult?.pdf) {
+    if (pdfResult?.url) {
       const link = document.createElement("a");
-      link.href = pdfResult.pdf;
+      link.href = pdfResult.url;
       link.download = `webpage-${Date.now()}.pdf`;
       link.target = "_blank";
       document.body.appendChild(link);
@@ -126,12 +125,12 @@ export const PDFGenerator = () => {
             <div className="space-y-2">
               <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                Your Api2Pdf API Key
+                Your PDFShift API Key
               </label>
               <Input
                 id="apiKey"
                 type="password"
-                placeholder="Enter your Api2Pdf API key..."
+                placeholder="Enter your PDFShift API key..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="border-primary/20 focus:border-primary focus:ring-primary/20"
@@ -139,13 +138,14 @@ export const PDFGenerator = () => {
               <p className="text-xs text-muted-foreground">
                 Get your API key from{" "}
                 <a
-                  href="https://portal.api2pdf.com/"
+                  href="https://pdfshift.io/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
-                  api2pdf.com
+                  pdfshift.io
                 </a>
+                {" "}(250 free requests/month)
               </p>
             </div>
           </CardContent>
@@ -218,8 +218,8 @@ export const PDFGenerator = () => {
                 Download PDF
               </Button>
               <div className="text-xs text-muted-foreground space-y-1">
-                <p>Size: {pdfResult.mbOut.toFixed(2)} MB</p>
-                <p>Cost: ${pdfResult.cost.toFixed(4)}</p>
+                <p>Size: {(pdfResult.filesize / 1024 / 1024).toFixed(2)} MB</p>
+                <p>Generated with PDFShift</p>
               </div>
             </CardContent>
           </Card>
