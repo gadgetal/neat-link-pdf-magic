@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Sparkles, Heart, Download, FileText, Loader2 } from "lucide-react";
+import { Sparkles, Heart, Download, FileText, Loader2, Settings } from "lucide-react";
 
 interface PDFResponse {
   success: boolean;
@@ -17,6 +18,7 @@ export const PDFGenerator = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [pdfResult, setPdfResult] = useState<PDFResponse | null>(null);
   const [apiKey, setApiKey] = useState("aa1ea615-c5ef-4049-8eb2-928b6c881024");
+  const [selectedService, setSelectedService] = useState("api2pdf");
 
   const isValidUrl = (string: string) => {
     try {
@@ -198,6 +200,46 @@ export const PDFGenerator = () => {
                 }}
               />
             </div>
+            
+            {/* PDF Service Selection */}
+            <div className="space-y-2">
+              <label htmlFor="service" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Settings className="h-4 w-4" />
+                PDF Service
+              </label>
+              <Select value={selectedService} onValueChange={setSelectedService}>
+                <SelectTrigger className="border-primary/20 focus:border-primary focus:ring-primary/20">
+                  <SelectValue placeholder="Choose PDF service" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border shadow-lg z-50">
+                  <SelectItem value="api2pdf" className="hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                      <span>API2PDF</span>
+                      <span className="text-xs text-muted-foreground">(Premium Quality)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="htmlcsstoimage" className="hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>HTML/CSS to Image</span>
+                      <span className="text-xs text-muted-foreground">(Alternative)</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="puppeteer" className="hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span>Puppeteer</span>
+                      <span className="text-xs text-muted-foreground">(Open Source)</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose your preferred PDF generation service
+              </p>
+            </div>
+
             <Button
               onClick={generatePDF}
               disabled={isLoading}
