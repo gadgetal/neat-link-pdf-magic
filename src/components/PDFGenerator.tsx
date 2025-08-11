@@ -61,12 +61,12 @@ export const PDFGenerator = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (data.pdf) {
+        if (data.FileUrl) {
           const result: PDFResponse = {
             success: true,
-            url: data.pdf,
-            filesize: 0, // API2PDF doesn't provide filesize
-            pdf: data.pdf
+            url: data.FileUrl,
+            filesize: data.MbOut * 1024 * 1024, // Convert MB to bytes
+            pdf: data.FileUrl
           };
           setPdfResult(result);
           toast.success("Your lovely PDF is ready! 💖");
