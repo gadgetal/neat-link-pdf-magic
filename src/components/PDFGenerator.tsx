@@ -30,7 +30,7 @@ export const PDFGenerator = () => {
   };
 
   const generatePDF = async () => {
-    if (!apiKey.trim()) {
+    if (selectedService === "api2pdf" && !apiKey.trim()) {
       toast.error("Please enter your API2PDF API key first! 🔑");
       return;
     }
@@ -49,68 +49,82 @@ export const PDFGenerator = () => {
     setPdfResult(null);
 
     try {
-      // Using API2PDF for better PDF generation
-      const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
-        method: "POST",
-        headers: {
-          "Authorization": apiKey,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          url: url,
-          inlinePdf: true,
-          fileName: "complete-website.pdf",
-          options: {
-            displayHeaderFooter: false,
-            printBackground: true,
-            format: "A4",
-            landscape: false,
-            preferCSSPageSize: false,
-            generateTaggedPDF: false,
-            waitTime: 5000,
-            emulateMedia: "screen",
-            fullPage: true,
-            viewport: {
-              width: 1920,
-              height: 1080,
-              deviceScaleFactor: 1
-            },
-            margin: {
-              top: "0.2in",
-              bottom: "0.2in",
-              left: "0.2in",
-              right: "0.2in"
-            },
-            extraHTTPHeaders: {
-              'Accept-Language': 'en-US,en;q=0.9'
-            }
-          }
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.FileUrl) {
-          const result: PDFResponse = {
-            success: true,
-            url: data.FileUrl,
-            filesize: data.MbOut * 1024 * 1024, // Convert MB to bytes
-            pdf: data.FileUrl
-          };
-          setPdfResult(result);
-          toast.success("Your lovely PDF is ready! 💖");
-        } else {
-          toast.error("Failed to generate PDF - no download link received");
-        }
-      } else {
-        const errorData = await response.json();
-        toast.error(`Error: ${errorData.error || "Failed to generate PDF"}`);
+      if (selectedService === "api2pdf") {
+        await generateWithAPI2PDF();
+      } else if (selectedService === "htmlcsstoimage") {
+        toast.error("HTML/CSS to Image service coming soon! 🚀");
+        setIsLoading(false);
+        return;
+      } else if (selectedService === "puppeteer") {
+        toast.error("Puppeteer service coming soon! 🚀");
+        setIsLoading(false);
+        return;
       }
     } catch (error) {
       console.error("Error generating PDF:", error);
       toast.error("Oops! Something went wrong. Please try again! 🥺");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const generateWithAPI2PDF = async () => {
+    // Using API2PDF for better PDF generation
+    const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
+      method: "POST",
+      headers: {
+        "Authorization": apiKey,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        url: url,
+        inlinePdf: true,
+        fileName: "complete-website.pdf",
+        options: {
+          displayHeaderFooter: false,
+          printBackground: true,
+          format: "A4",
+          landscape: false,
+          preferCSSPageSize: false,
+          generateTaggedPDF: false,
+          waitTime: 5000,
+          emulateMedia: "screen",
+          fullPage: true,
+          viewport: {
+            width: 1920,
+            height: 1080,
+            deviceScaleFactor: 1
+          },
+          margin: {
+            top: "0.2in",
+            bottom: "0.2in",
+            left: "0.2in",
+            right: "0.2in"
+          },
+          extraHTTPHeaders: {
+            'Accept-Language': 'en-US,en;q=0.9'
+          }
+        }
+      }),
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (data.FileUrl) {
+        const result: PDFResponse = {
+          success: true,
+          url: data.FileUrl,
+          filesize: data.MbOut * 1024 * 1024, // Convert MB to bytes
+          pdf: data.FileUrl
+        };
+        setPdfResult(result);
+        toast.success("Your lovely PDF is ready! 💖");
+      } else {
+        toast.error("Failed to generate PDF - no download link received");
+      }
+    } else {
+      const errorData = await response.json();
+      toast.error(`Error: ${errorData.error || "Failed to generate PDF"}`);
     }
   };
 
@@ -145,37 +159,39 @@ export const PDFGenerator = () => {
           </p>
         </div>
 
-        {/* API Key Input */}
-        <Card className="bg-gradient-card border-0 shadow-soft">
-          <CardContent className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
-                <Sparkles className="h-4 w-4" />
-                Your API2PDF API Key
-              </label>
-              <Input
-                id="apiKey"
-                type="text"
-                placeholder="Enter your API2PDF API key..."
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-                className="border-primary/20 focus:border-primary focus:ring-primary/20"
-              />
-              <p className="text-xs text-muted-foreground">
-                Get your API key from{" "}
-                <a
-                  href="https://api2pdf.com"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  api2pdf.com
-                </a>
-                {" "}(Free trial available)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+        {/* API Key Input - Only show for services that need it */}
+        {selectedService === "api2pdf" && (
+          <Card className="bg-gradient-card border-0 shadow-soft">
+            <CardContent className="p-6 space-y-4">
+              <div className="space-y-2">
+                <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
+                  <Sparkles className="h-4 w-4" />
+                  Your API2PDF API Key
+                </label>
+                <Input
+                  id="apiKey"
+                  type="text"
+                  placeholder="Enter your API2PDF API key..."
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  className="border-primary/20 focus:border-primary focus:ring-primary/20"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Get your API key from{" "}
+                  <a
+                    href="https://api2pdf.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    api2pdf.com
+                  </a>
+                  {" "}(Free trial available)
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
 
         {/* URL Input */}
