@@ -159,39 +159,6 @@ export const PDFGenerator = () => {
           </p>
         </div>
 
-        {/* API Key Input - Only show for services that need it */}
-        {selectedService === "api2pdf" && (
-          <Card className="bg-gradient-card border-0 shadow-soft">
-            <CardContent className="p-6 space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
-                  <Sparkles className="h-4 w-4" />
-                  Your API2PDF API Key
-                </label>
-                <Input
-                  id="apiKey"
-                  type="text"
-                  placeholder="Enter your API2PDF API key..."
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="border-primary/20 focus:border-primary focus:ring-primary/20"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Get your API key from{" "}
-                  <a
-                    href="https://api2pdf.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
-                  >
-                    api2pdf.com
-                  </a>
-                  {" "}(Free trial available)
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
 
 
         {/* URL Input */}
