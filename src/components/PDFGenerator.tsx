@@ -201,34 +201,16 @@ export const PDFGenerator = () => {
                       <span>Api2Pdf</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="pdfcrowd" className="hover:bg-accent">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span>PDFCrowd</span>
-                    </div>
-                  </SelectItem>
                   <SelectItem value="pdfshift" className="hover:bg-accent">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
                       <span>PDFShift</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="docraptor" className="hover:bg-accent">
+                  <SelectItem value="pdfcrowd" className="hover:bg-accent">
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
-                      <span>DocRaptor</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="htmlpdfapi" className="hover:bg-accent">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                      <span>HTMLPDFAPI</span>
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="pdflayer" className="hover:bg-accent">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
-                      <span>PDFLayer</span>
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span>PDFCrowd</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
