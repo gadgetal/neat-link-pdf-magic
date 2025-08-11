@@ -5,19 +5,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, Heart, Download, FileText, Loader2 } from "lucide-react";
 
-interface PDFShiftResponse {
+interface PDFResponse {
   success: boolean;
   url: string;
   filesize: number;
-  duration: number;
-  response: string;
+  pdf?: string;
 }
 
 export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pdfResult, setPdfResult] = useState<PDFShiftResponse | null>(null);
-  const [apiKey, setApiKey] = useState("");
+  const [pdfResult, setPdfResult] = useState<PDFResponse | null>(null);
+  const [apiKey, setApiKey] = useState("aa1ea615-c5ef-4049-8eb2-928b6c881024");
 
   const isValidUrl = (string: string) => {
     try {
@@ -30,7 +29,7 @@ export const PDFGenerator = () => {
 
   const generatePDF = async () => {
     if (!apiKey.trim()) {
-      toast.error("Please enter your PDFCrowd API key first! 🔑");
+      toast.error("Please enter your API2PDF API key first! 🔑");
       return;
     }
 
@@ -48,36 +47,32 @@ export const PDFGenerator = () => {
     setPdfResult(null);
 
     try {
-      // Using PDFCrowd API for better PDF generation
-      const response = await fetch("https://api.pdfcrowd.com/convert/24.04/", {
+      // Using API2PDF for better PDF generation
+      const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
         method: "POST",
         headers: {
-          "Authorization": `Basic ${btoa(apiKey + ":token")}`,
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Authorization": apiKey,
+          "Content-Type": "application/json",
         },
-        body: new URLSearchParams({
-          src: url,
-          output_format: "pdf",
-          page_size: "A4",
-          margin_top: "0.5in",
-          margin_bottom: "0.5in",
-          margin_left: "0.5in",
-          margin_right: "0.5in"
+        body: JSON.stringify({
+          url: url
         }),
       });
 
       if (response.ok) {
-        const pdfBlob = await response.blob();
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        const result: PDFShiftResponse = {
-          success: true,
-          url: pdfUrl,
-          filesize: pdfBlob.size,
-          duration: 0,
-          response: "success"
-        };
-        setPdfResult(result);
-        toast.success("Your lovely PDF is ready! 💖");
+        const data = await response.json();
+        if (data.pdf) {
+          const result: PDFResponse = {
+            success: true,
+            url: data.pdf,
+            filesize: 0, // API2PDF doesn't provide filesize
+            pdf: data.pdf
+          };
+          setPdfResult(result);
+          toast.success("Your lovely PDF is ready! 💖");
+        } else {
+          toast.error("Failed to generate PDF - no download link received");
+        }
       } else {
         const errorData = await response.json();
         toast.error(`Error: ${errorData.error || "Failed to generate PDF"}`);
@@ -127,12 +122,12 @@ export const PDFGenerator = () => {
             <div className="space-y-2">
               <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
                 <Sparkles className="h-4 w-4" />
-                Your PDFCrowd API Key
+                Your API2PDF API Key
               </label>
               <Input
                 id="apiKey"
                 type="text"
-                placeholder="Enter your PDFCrowd API key..."
+                placeholder="Enter your API2PDF API key..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="border-primary/20 focus:border-primary focus:ring-primary/20"
@@ -140,14 +135,14 @@ export const PDFGenerator = () => {
               <p className="text-xs text-muted-foreground">
                 Get your API key from{" "}
                 <a
-                  href="https://pdfcrowd.com/user/sign_up/?pid=api-trial2"
+                  href="https://api2pdf.com"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-primary hover:underline"
                 >
-                  pdfcrowd.com
+                  api2pdf.com
                 </a>
-                {" "}(Free trial available - no credit card required)
+                {" "}(Free trial available)
               </p>
             </div>
           </CardContent>
@@ -222,7 +217,7 @@ export const PDFGenerator = () => {
               </Button>
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>Size: {(pdfResult.filesize / 1024 / 1024).toFixed(2)} MB</p>
-                <p>Generated with PDFCrowd</p>
+                <p>Generated with API2PDF</p>
               </div>
             </CardContent>
           </Card>
