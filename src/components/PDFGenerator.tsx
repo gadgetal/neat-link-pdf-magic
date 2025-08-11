@@ -129,7 +129,7 @@ export const PDFGenerator = () => {
               </label>
               <Input
                 id="apiKey"
-                type="password"
+                type="text"
                 placeholder="Enter your PDFShift API key..."
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
