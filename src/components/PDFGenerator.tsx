@@ -57,24 +57,30 @@ export const PDFGenerator = () => {
         body: JSON.stringify({
           url: url,
           inlinePdf: true,
-          fileName: "complete-webpage.pdf",
+          fileName: "complete-website.pdf",
           options: {
             displayHeaderFooter: false,
             printBackground: true,
             format: "A4",
+            landscape: false,
             preferCSSPageSize: false,
             generateTaggedPDF: false,
-            waitTime: 3000,
+            waitTime: 5000,
             emulateMedia: "screen",
+            fullPage: true,
             viewport: {
               width: 1920,
-              height: 1080
+              height: 1080,
+              deviceScaleFactor: 1
             },
             margin: {
-              top: "0.4in",
-              bottom: "0.4in", 
-              left: "0.4in",
-              right: "0.4in"
+              top: "0.2in",
+              bottom: "0.2in",
+              left: "0.2in",
+              right: "0.2in"
+            },
+            extraHTTPHeaders: {
+              'Accept-Language': 'en-US,en;q=0.9'
             }
           }
         }),
