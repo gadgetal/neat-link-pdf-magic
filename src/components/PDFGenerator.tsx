@@ -4,14 +4,21 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Sparkles, Heart, Download, FileText, Loader2 } from "lucide-react";
-import jsPDF from "jspdf";
-import html2canvas from "html2canvas";
+
+interface PDFResponse {
+  success: boolean;
+  pdf: string;
+  mbIn: number;
+  mbOut: number;
+  cost: number;
+  responseId: string;
+}
 
 export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
-  const [filename, setFilename] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pdfGenerated, setPdfGenerated] = useState(false);
+  const [pdfResult, setPdfResult] = useState<PDFResponse | null>(null);
+  const [apiKey, setApiKey] = useState("");
 
   const isValidUrl = (string: string) => {
     try {
@@ -23,6 +30,11 @@ export const PDFGenerator = () => {
   };
 
   const generatePDF = async () => {
+    if (!apiKey.trim()) {
+      toast.error("Please enter your Api2Pdf API key first! 🔑");
+      return;
+    }
+
     if (!url.trim()) {
       toast.error("Please enter a URL to convert! 🌐");
       return;
@@ -34,92 +46,60 @@ export const PDFGenerator = () => {
     }
 
     setIsLoading(true);
-    setPdfGenerated(false);
+    setPdfResult(null);
 
     try {
-      toast("Creating PDF from website...", { duration: 5000 });
-      
-      // Create PDF
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      
-      // Use a simple and reliable screenshot service
-      const screenshotUrl = `https://api.microlink.io/screenshot?url=${encodeURIComponent(url)}&viewport.width=1200&viewport.height=800&fullPage=true`;
-      
-      console.log('Using screenshot URL:', screenshotUrl);
-      
-      // Try to fetch the screenshot
-      const response = await fetch(screenshotUrl);
-      if (!response.ok) {
-        throw new Error(`Screenshot API failed: ${response.status}`);
-      }
-      
-      const blob = await response.blob();
-      const imageUrl = URL.createObjectURL(blob);
-      
-      // Load the image
-      const img = new Image();
-      await new Promise((resolve, reject) => {
-        img.onload = () => {
-          console.log('Image loaded successfully:', img.width, 'x', img.height);
-          resolve(undefined);
-        };
-        img.onerror = () => reject(new Error('Failed to load image'));
-        img.src = imageUrl;
+      const response = await fetch("https://v2.api2pdf.com/chrome/pdf/url", {
+        method: "POST",
+        headers: {
+          "Authorization": apiKey,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          url: url,
+          inlinePdf: true,
+          options: {
+            landscape: false,
+            displayHeaderFooter: false,
+            printBackground: true,
+            format: "A4",
+            margin: {
+              top: "0.5in",
+              bottom: "0.5in",
+              left: "0.5in",
+              right: "0.5in"
+            }
+          }
+        }),
       });
-      
-      // Add title
-      pdf.setFontSize(16);
-      pdf.setTextColor(138, 43, 226);
-      pdf.text('Website PDF', 20, 20);
-      
-      // Add URL
-      pdf.setFontSize(10);
-      pdf.setTextColor(0, 0, 0);
-      const urlLines = pdf.splitTextToSize(url, 170);
-      pdf.text(urlLines, 20, 30);
-      
-      // Calculate image dimensions
-      const pageWidth = 170;
-      const maxHeight = 240;
-      const imgAspectRatio = img.width / img.height;
-      let imgWidth = pageWidth;
-      let imgHeight = pageWidth / imgAspectRatio;
-      
-      if (imgHeight > maxHeight) {
-        imgHeight = maxHeight;
-        imgWidth = maxHeight * imgAspectRatio;
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPdfResult(data);
+        toast.success("Your lovely PDF is ready! 💖");
+      } else {
+        toast.error(`Error: ${data.error || "Failed to generate PDF"}`);
       }
-      
-      // Add image to PDF
-      pdf.addImage(img, 'JPEG', 20, 45, imgWidth, imgHeight);
-      
-      // Clean up
-      URL.revokeObjectURL(imageUrl);
-      
-      // Add footer
-      pdf.setFontSize(8);
-      pdf.setTextColor(150, 150, 150);
-      pdf.text(`Generated on ${new Date().toLocaleDateString()}`, 20, 285);
-      
-      // Save PDF
-      const fileName = filename.trim() ? `${filename.trim()}.pdf` : `website-${Date.now()}.pdf`;
-      pdf.save(fileName);
-      
-      setPdfGenerated(true);
-      toast.success("Website PDF created successfully! 🎉");
-      
     } catch (error) {
       console.error("Error generating PDF:", error);
-      toast.error("Unable to create PDF. Please check the URL and try again! 🔄");
+      toast.error("Oops! Something went wrong. Please try again! 🥺");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const generateAnother = () => {
-    setPdfGenerated(false);
-    setUrl("");
-    setFilename("");
+  const downloadPDF = () => {
+    if (pdfResult?.pdf) {
+      const link = document.createElement("a");
+      link.href = pdfResult.pdf;
+      link.download = `webpage-${Date.now()}.pdf`;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      toast.success("Download started! Enjoy your PDF! 🎉");
+    }
   };
 
   return (
@@ -136,10 +116,40 @@ export const PDFGenerator = () => {
             PDF Magic ✨
           </h1>
           <p className="text-xl text-muted-foreground">
-            Turn any website into a beautiful PDF - No API key needed! ✨
+            Let's turn this into a beautiful PDF for you ✨
           </p>
         </div>
 
+        {/* API Key Input */}
+        <Card className="bg-gradient-card border-0 shadow-soft">
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Your Api2Pdf API Key
+              </label>
+              <Input
+                id="apiKey"
+                type="password"
+                placeholder="Enter your Api2Pdf API key..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="border-primary/20 focus:border-primary focus:ring-primary/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                Get your API key from{" "}
+                <a
+                  href="https://portal.api2pdf.com/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  api2pdf.com
+                </a>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* URL Input */}
         <Card className="bg-gradient-card border-0 shadow-soft">
@@ -163,28 +173,6 @@ export const PDFGenerator = () => {
                 }}
               />
             </div>
-            <div className="space-y-2">
-              <label htmlFor="filename" className="text-sm font-medium text-foreground flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary animate-pulse-soft" />
-                PDF File Name (Optional)
-              </label>
-              <Input
-                id="filename"
-                type="text"
-                placeholder="my-website-pdf"
-                value={filename}
-                onChange={(e) => setFilename(e.target.value)}
-                className="border-primary/20 focus:border-primary focus:ring-primary/20"
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !isLoading) {
-                    generatePDF();
-                  }
-                }}
-              />
-              <p className="text-xs text-muted-foreground">
-                Leave empty for automatic naming
-              </p>
-            </div>
             <Button
               onClick={generatePDF}
               disabled={isLoading}
@@ -207,7 +195,7 @@ export const PDFGenerator = () => {
         </Card>
 
         {/* Success Result */}
-        {pdfGenerated && (
+        {pdfResult && (
           <Card className="bg-gradient-card border-0 shadow-soft animate-[fadeIn_0.5s_ease-out]">
             <CardContent className="p-6 text-center space-y-4">
               <div className="flex justify-center">
@@ -216,19 +204,23 @@ export const PDFGenerator = () => {
                 </div>
               </div>
               <h3 className="text-xl font-semibold text-foreground">
-                PDF Downloaded Successfully! 💖
+                Here's your lovely PDF 💖
               </h3>
               <p className="text-muted-foreground">
-                Your PDF has been automatically downloaded. Check your downloads folder!
+                Click below to download and keep it forever!
               </p>
               <Button
-                onClick={generateAnother}
+                onClick={downloadPDF}
                 className="bg-accent hover:bg-accent/90 text-accent-foreground shadow-gentle hover:scale-105 transition-all duration-200"
                 size="lg"
               >
-                <Sparkles className="mr-2 h-5 w-5" />
-                Generate Another PDF
+                <Download className="mr-2 h-5 w-5" />
+                Download PDF
               </Button>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>Size: {pdfResult.mbOut.toFixed(2)} MB</p>
+                <p>Cost: ${pdfResult.cost.toFixed(4)}</p>
+              </div>
             </CardContent>
           </Card>
         )}
