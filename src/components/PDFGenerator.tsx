@@ -231,22 +231,37 @@ export const PDFGenerator = () => {
                   <SelectItem value="api2pdf" className="hover:bg-accent">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span>API2PDF</span>
-                      <span className="text-xs text-muted-foreground">(Premium Quality)</span>
+                      <span>Api2Pdf</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="htmlcsstoimage" className="hover:bg-accent">
+                  <SelectItem value="pdfcrowd" className="hover:bg-accent">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                      <span>HTML/CSS to Image</span>
-                      <span className="text-xs text-muted-foreground">(Alternative)</span>
+                      <span>PDFCrowd</span>
                     </div>
                   </SelectItem>
-                  <SelectItem value="puppeteer" className="hover:bg-accent">
+                  <SelectItem value="pdfshift" className="hover:bg-accent">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                      <span>Puppeteer</span>
-                      <span className="text-xs text-muted-foreground">(Open Source)</span>
+                      <span>PDFShift</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="docraptor" className="hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span>DocRaptor</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="htmlpdfapi" className="hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                      <span>HTMLPDFAPI</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="pdflayer" className="hover:bg-accent">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 bg-indigo-500 rounded-full"></div>
+                      <span>PDFLayer</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
