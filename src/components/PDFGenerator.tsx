@@ -17,7 +17,7 @@ export const PDFGenerator = () => {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [pdfResult, setPdfResult] = useState<PDFShiftResponse | null>(null);
-  const [apiKey, setApiKey] = useState("sk_46f5ed081e2c772667c363b653d428f050b8f53d");
+  const [apiKey, setApiKey] = useState("");
 
   const isValidUrl = (string: string) => {
     try {
@@ -30,7 +30,7 @@ export const PDFGenerator = () => {
 
   const generatePDF = async () => {
     if (!apiKey.trim()) {
-      toast.error("Please enter your PDFShift API key first! 🔑");
+      toast.error("Please enter your PDFCrowd API key first! 🔑");
       return;
     }
 
@@ -48,19 +48,21 @@ export const PDFGenerator = () => {
     setPdfResult(null);
 
     try {
-      const response = await fetch("https://api.pdfshift.io/v3/convert/pdf", {
+      // Using PDFCrowd API for better PDF generation
+      const response = await fetch("https://api.pdfcrowd.com/convert/24.04/", {
         method: "POST",
         headers: {
-          "Authorization": `Basic ${btoa(apiKey + ":")}`,
-          "Content-Type": "application/json",
+          "Authorization": `Basic ${btoa(apiKey + ":token")}`,
+          "Content-Type": "application/x-www-form-urlencoded",
         },
-        body: JSON.stringify({
-          source: url,
-          landscape: false,
-          format: "A4",
-          margin: "0.5in",
-          print_background: true,
-          wait_until: "networkidle0"
+        body: new URLSearchParams({
+          src: url,
+          output_format: "pdf",
+          page_size: "A4",
+          margin_top: "0.5in",
+          margin_bottom: "0.5in",
+          margin_left: "0.5in",
+          margin_right: "0.5in"
         }),
       });
 
@@ -118,6 +120,38 @@ export const PDFGenerator = () => {
             Let's turn this into a beautiful PDF for you ✨
           </p>
         </div>
+
+        {/* API Key Input */}
+        <Card className="bg-gradient-card border-0 shadow-soft">
+          <CardContent className="p-6 space-y-4">
+            <div className="space-y-2">
+              <label htmlFor="apiKey" className="text-sm font-medium text-foreground flex items-center gap-2">
+                <Sparkles className="h-4 w-4" />
+                Your PDFCrowd API Key
+              </label>
+              <Input
+                id="apiKey"
+                type="text"
+                placeholder="Enter your PDFCrowd API key..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="border-primary/20 focus:border-primary focus:ring-primary/20"
+              />
+              <p className="text-xs text-muted-foreground">
+                Get your API key from{" "}
+                <a
+                  href="https://pdfcrowd.com/user/sign_up/?pid=api-trial2"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  pdfcrowd.com
+                </a>
+                {" "}(Free trial available - no credit card required)
+              </p>
+            </div>
+          </CardContent>
+        </Card>
 
 
         {/* URL Input */}
@@ -188,7 +222,7 @@ export const PDFGenerator = () => {
               </Button>
               <div className="text-xs text-muted-foreground space-y-1">
                 <p>Size: {(pdfResult.filesize / 1024 / 1024).toFixed(2)} MB</p>
-                <p>Generated with PDFShift</p>
+                <p>Generated with PDFCrowd</p>
               </div>
             </CardContent>
           </Card>
