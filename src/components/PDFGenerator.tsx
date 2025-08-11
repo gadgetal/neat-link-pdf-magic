@@ -55,7 +55,20 @@ export const PDFGenerator = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          url: url
+          url: url,
+          inlinePdf: true,
+          fileName: "webpage.pdf",
+          options: {
+            displayHeaderFooter: false,
+            printBackground: true,
+            format: "A4",
+            margin: {
+              top: "0.5in",
+              bottom: "0.5in",
+              left: "0.5in", 
+              right: "0.5in"
+            }
+          }
         }),
       });
 
